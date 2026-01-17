@@ -3,18 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 
 export default function DashboardPage() {
   const [rollNo, setRollNo] = useState("");
+  const [debugMsg, setDebugMsg] = useState("");
   const router = useRouter();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (rollNo.trim()) {
-      const encodedRollNo = encodeURIComponent(rollNo.trim());
-      router.push(`/verify?id=${encodedRollNo}`);
+    if (!rollNo.trim()) return;
+
+    try {
+      // FIX: Force Uppercase and Remove all Spaces
+      const cleanId = rollNo.toUpperCase().replace(/\s/g, "");
+      setDebugMsg(`Searching for: ${cleanId}`); // Show what is actually being searched
+
+      // Now encode it
+      router.push(`/verify?id=${encodeURIComponent(cleanId)}`);
+    } catch (err) {
+      if (err instanceof Error) {
+        setDebugMsg(`Error: ${err.message}`);
+      } else {
+        setDebugMsg("An unknown error occurred.");
+      }
     }
   };
 
@@ -53,6 +66,11 @@ export default function DashboardPage() {
               <Search className="h-6 w-6" />
             </Button>
           </form>
+          {debugMsg && (
+            <p className="mt-4 text-center text-sm text-red-500">
+              {debugMsg}
+            </p>
+          )}
         </main>
       </div>
     </div>
