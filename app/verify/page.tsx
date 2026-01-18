@@ -9,10 +9,10 @@ import {
 } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { ArrowLeft, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, AlertTriangle, XCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { ConfirmPayoutButton } from "../components/ConfirmPayoutButton";
-import { confirmPayout } from "./payment-action";
+import { confirmPayout, markAsUnpaid } from "./payment-action";
 
 export default async function VerifyPage({
   searchParams,
@@ -28,11 +28,22 @@ export default async function VerifyPage({
   }
 
   const supabase = createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
   const { data: recipient } = await supabase
     .from("recipients")
     .select("*")
     .eq("roll_no", rollNo)
     .single();
+
+  const { data: userRole } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("id", user?.id)
+    .single();
+
+  const isAdmin = userRole?.role === "admin";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -55,7 +66,7 @@ export default async function VerifyPage({
         ) : (
           <div className="mx-auto max-w-lg">
             <IdentityCard recipient={recipient} />
-            <ActionSection recipient={recipient} />
+            <ActionSection recipient={recipient} isAdmin={isAdmin} />
           </div>
         )}
       </main>
@@ -76,9 +87,9 @@ function IdentityCard({ recipient }: { recipient: any }) {
   );
 }
 
-function ActionSection({ recipient }: { recipient: any }) {
+function ActionSection({ recipient, isAdmin }: { recipient: any, isAdmin: boolean }) {
   if (recipient.status === "paid") {
-    return <PaidCard paidAt={recipient.paid_at} />;
+    return <PaidCard paidAt={recipient.paid_at} isAdmin={isAdmin} rollNo={recipient.roll_no} />;
   }
 
   return (
@@ -97,7 +108,7 @@ function ActionSection({ recipient }: { recipient: any }) {
   );
 }
 
-function PaidCard({ paidAt }: { paidAt: string }) {
+function PaidCard({ paidAt, isAdmin, rollNo }: { paidAt: string, isAdmin: boolean, rollNo: string }) {
   return (
     <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-2xl">
       <CardContent className="flex flex-col items-center justify-center p-8 text-center sm:p-12">
@@ -114,6 +125,18 @@ function PaidCard({ paidAt }: { paidAt: string }) {
             Find Next Person
           </Button>
         </Link>
+        {isAdmin && (
+          <form action={markAsUnpaid.bind(null, rollNo)} className="mt-4 w-full">
+            <Button
+              type="submit"
+              variant="destructive"
+              className="h-12 w-full rounded-full bg-red-500/80 text-base font-semibold text-white transition-all hover:bg-red-600"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Mark as Unpaid
+            </Button>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

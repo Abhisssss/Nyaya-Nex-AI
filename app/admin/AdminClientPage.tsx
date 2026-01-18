@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { Download } from "lucide-react";
+import { Download, ArrowLeft } from "lucide-react";
 import Papa from "papaparse";
 import { createClient } from "../../utils/supabase/client";
+import Link from "next/link"; // Import Link component
 
 export default function AdminClientPage({
   payouts,
@@ -64,7 +65,14 @@ export default function AdminClientPage({
   return (
     <div className="p-4 sm:p-6">
       <header className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
+        </div>
         <Button onClick={handleDownload} disabled={loading}>
           <Download className="mr-2 h-4 w-4" />
           {loading ? "Downloading..." : `Download ${currentStatus} CSV`}

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Clock } from "lucide-react";
+import Link from "next/link";
+import { Search, Clock, Shield } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { createClient } from "../../utils/supabase/client";
@@ -19,10 +20,29 @@ export default function DashboardPage() {
   const [rollNo, setRollNo] = useState("");
   const [debugMsg, setDebugMsg] = useState("");
   const [recentPayouts, setRecentPayouts] = useState<Payout[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
+    const fetchUserRole = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: userRole, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (userRole?.role === "admin") {
+          setIsAdmin(true);
+        }
+      }
+    };
+
     const fetchRecentPayouts = async () => {
       const {
         data: { user },
@@ -45,6 +65,7 @@ export default function DashboardPage() {
       }
     };
 
+    fetchUserRole();
     fetchRecentPayouts();
   }, [supabase]);
 
@@ -68,13 +89,23 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen flex-col items-center bg-slate-50 p-4 sm:p-6">
       <div className="w-full max-w-2xl">
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Payout Portal
-          </h1>
-          <p className="mt-2 text-base text-slate-600">
-            Verify beneficiary payouts
-          </p>
+        <header className="mb-8 flex items-center justify-between">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Payout Portal
+            </h1>
+            <p className="mt-2 text-base text-slate-600">
+              Verify beneficiary payouts
+            </p>
+          </div>
+          {isAdmin && (
+            <Link href="/admin">
+              <Button variant="outline">
+                <Shield className="mr-2 h-4 w-4" />
+                Admin Panel
+              </Button>
+            </Link>
+          )}
         </header>
 
         <main className="space-y-12">
