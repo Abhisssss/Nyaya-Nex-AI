@@ -1,26 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, Clock } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { createClient } from "../../utils/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+import { Card, CardContent } from "../components/ui/card";
+
+type Payout = {
+  name: string;
+  roll_no: string;
+  paid_at: string;
+};
 
 export default function DashboardPage() {
   const [rollNo, setRollNo] = useState("");
   const [debugMsg, setDebugMsg] = useState("");
+  const [recentPayouts, setRecentPayouts] = useState<Payout[]>([]);
   const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchRecentPayouts = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data, error } = await supabase
+          .from("recipients")
+          .select("name, roll_no, paid_at")
+          .eq("updated_by", user.id)
+          .eq("status", "paid")
+          .order("paid_at", { ascending: false })
+          .limit(10);
+
+        if (error) {
+          setDebugMsg("Error fetching recent payouts.");
+        } else {
+          setRecentPayouts(data);
+        }
+      }
+    };
+
+    fetchRecentPayouts();
+  }, [supabase]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!rollNo.trim()) return;
 
     try {
-      // FIX: Force Uppercase and Remove all Spaces
       const cleanId = rollNo.toUpperCase().replace(/\s/g, "");
-      setDebugMsg(`Searching for: ${cleanId}`); // Show what is actually being searched
-
-      // Now encode it
+      setDebugMsg(`Searching for: ${cleanId}`);
       router.push(`/verify?id=${encodeURIComponent(cleanId)}`);
     } catch (err) {
       if (err instanceof Error) {
@@ -43,11 +77,8 @@ export default function DashboardPage() {
           </p>
         </header>
 
-        <main>
-          <form
-            onSubmit={handleSearch}
-            className="relative flex items-center"
-          >
+        <main className="space-y-12">
+          <form onSubmit={handleSearch} className="relative flex items-center">
             <Input
               id="search"
               type="text"
@@ -67,10 +98,40 @@ export default function DashboardPage() {
             </Button>
           </form>
           {debugMsg && (
-            <p className="mt-4 text-center text-sm text-red-500">
-              {debugMsg}
-            </p>
+            <p className="mt-4 text-center text-sm text-red-500">{debugMsg}</p>
           )}
+
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-slate-800">
+              Your Recent Payouts
+            </h2>
+            {recentPayouts.length > 0 ? (
+              <div className="space-y-3">
+                {recentPayouts.map((payout) => (
+                  <Card key={payout.roll_no}>
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div>
+                        <p className="font-bold">{payout.name}</p>
+                        <p className="text-sm text-slate-500">
+                          {payout.roll_no}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-slate-500">
+                        <Clock className="h-4 w-4" />
+                        {formatDistanceToNow(new Date(payout.paid_at), {
+                          addSuffix: true,
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-slate-500">
+                No recent payouts today.
+              </p>
+            )}
+          </div>
         </main>
       </div>
     </div>

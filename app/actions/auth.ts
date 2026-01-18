@@ -3,7 +3,7 @@
 import { createClient } from "../../utils/supabase/server";
 import { redirect } from "next/navigation";
 
-export async function login(formData: FormData) {
+export async function login(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const supabase = createClient();
@@ -14,7 +14,9 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    return redirect("/login?message=Could not authenticate user");
+    return {
+      message: error.message,
+    };
   }
 
   return redirect("/dashboard");

@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { ArrowLeft, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { ConfirmPayoutButton } from "../components/ConfirmPayoutButton";
-import { revalidatePath } from "next/cache";
+import { confirmPayout } from "./payment-action";
 
 export default async function VerifyPage({
   searchParams,
@@ -33,29 +33,6 @@ export default async function VerifyPage({
     .select("*")
     .eq("roll_no", rollNo)
     .single();
-
-  async function confirmPayout(roll_no: string) {
-    "use server";
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    const { error } = await supabase
-      .from("recipients")
-      .update({ status: "paid", updated_by: user.id })
-      .eq("roll_no", roll_no);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    revalidatePath(`/verify?id=${encodeURIComponent(roll_no)}`);
-  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -78,7 +55,7 @@ export default async function VerifyPage({
         ) : (
           <div className="mx-auto max-w-lg">
             <IdentityCard recipient={recipient} />
-            <ActionSection recipient={recipient} confirmPayout={confirmPayout} />
+            <ActionSection recipient={recipient} />
           </div>
         )}
       </main>
@@ -99,13 +76,7 @@ function IdentityCard({ recipient }: { recipient: any }) {
   );
 }
 
-function ActionSection({
-  recipient,
-  confirmPayout,
-}: {
-  recipient: any;
-  confirmPayout: (roll_no: string) => Promise<void>;
-}) {
+function ActionSection({ recipient }: { recipient: any }) {
   if (recipient.status === "paid") {
     return <PaidCard paidAt={recipient.paid_at} />;
   }
@@ -130,7 +101,7 @@ function PaidCard({ paidAt }: { paidAt: string }) {
   return (
     <Card className="overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-2xl">
       <CardContent className="flex flex-col items-center justify-center p-8 text-center sm:p-12">
-        <CheckCircle className="mb-6 h-20 w-20 animate-pulse" />
+        <CheckCircle className="mb-6 h-20 w-20" />
         <h2 className="text-3xl font-bold">Payment Confirmed</h2>
         <p className="mt-2 text-lg opacity-90">
           Paid on: {new Date(paidAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}

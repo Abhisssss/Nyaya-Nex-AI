@@ -1,9 +1,20 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { login } from "@/actions/auth";
+"use client";
+
+import { useFormState, useFormStatus } from "react-dom";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { login } from "../actions/auth";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+
+const initialState = {
+  message: "",
+};
 
 export default function LoginPage() {
+  const [state, formAction] = useFormState(login, initialState);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md space-y-6">
@@ -15,7 +26,7 @@ export default function LoginPage() {
             Payout Verification Portal
           </p>
         </div>
-        <form className="space-y-4">
+        <form action={formAction} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -37,6 +48,15 @@ export default function LoginPage() {
               className="h-14 text-base"
             />
           </div>
+
+          {state.message && (
+            <Alert variant="destructive" className="bg-red-50 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Login Error</AlertTitle>
+              <AlertDescription>{state.message}</AlertDescription>
+            </Alert>
+          )}
+
           <SignInButton />
         </form>
       </div>
@@ -45,12 +65,15 @@ export default function LoginPage() {
 }
 
 function SignInButton() {
+  const { pending } = useFormStatus();
+
   return (
     <Button
-      formAction={login}
+      type="submit"
       className="h-14 w-full bg-slate-900 text-base font-semibold text-white hover:bg-slate-800"
+      disabled={pending}
     >
-      Sign In
+      {pending ? "Signing In..." : "Sign In"}
     </Button>
   );
 }
