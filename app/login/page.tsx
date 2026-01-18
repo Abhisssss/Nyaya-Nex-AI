@@ -1,19 +1,41 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { login } from "../actions/auth";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-
-const initialState = {
-  message: "",
-};
+import { createClient } from "../../utils/supabase/client";
 
 export default function LoginPage() {
-  const [state, formAction] = useFormState(login, initialState);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setErrorMessage("");
+
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      router.push("/dashboard");
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
@@ -26,7 +48,7 @@ export default function LoginPage() {
             Payout Verification Portal
           </p>
         </div>
-        <form action={formAction} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -49,31 +71,23 @@ export default function LoginPage() {
             />
           </div>
 
-          {state.message && (
+          {errorMessage && (
             <Alert variant="destructive" className="bg-red-50 text-red-600">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Login Error</AlertTitle>
-              <AlertDescription>{state.message}</AlertDescription>
+              <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           )}
 
-          <SignInButton />
+          <Button
+            type="submit"
+            className="h-14 w-full bg-slate-900 text-base font-semibold text-white hover:bg-slate-800"
+            disabled={loading}
+          >
+            {loading ? "Signing In..." : "Sign In"}
+          </Button>
         </form>
       </div>
     </div>
-  );
-}
-
-function SignInButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button
-      type="submit"
-      className="h-14 w-full bg-slate-900 text-base font-semibold text-white hover:bg-slate-800"
-      disabled={pending}
-    >
-      {pending ? "Signing In..." : "Sign In"}
-    </Button>
   );
 }
